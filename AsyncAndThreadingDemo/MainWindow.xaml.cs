@@ -29,6 +29,7 @@ namespace AsyncAndThreadingDemo
 
         private readonly JoinableTaskFactory joinableTaskFactory;
         private readonly JoinableTaskCollection joinableTaskCollection;
+        private readonly CancellationTokenSource disposalTokenSource = new CancellationTokenSource();
 
         public MainWindow()
         {
@@ -40,6 +41,7 @@ namespace AsyncAndThreadingDemo
         protected override void OnClosing(CancelEventArgs e)
         {
             base.OnClosing(e);
+            this.disposalTokenSource.Cancel();
             this.joinableTaskContext.Factory.Run(() => this.joinableTaskCollection.JoinTillEmptyAsync());
         }
 
@@ -76,6 +78,7 @@ namespace AsyncAndThreadingDemo
                 StartLongProcess.IsEnabled = false;
                 for (int i = 0; i <= 100; i++)
                 {
+                    this.disposalTokenSource.Token.ThrowIfCancellationRequested();
                     TaskProgress.Value = i;
                     await Task.Delay(50);
                 }
