@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.VisualStudio.Threading;
 
 namespace AsyncAndThreadingDemo
 {
@@ -21,9 +24,23 @@ namespace AsyncAndThreadingDemo
     /// </summary>
     public partial class MainWindow : Window
     {
+        // Have only 1 of these in the entire application!
+        private readonly JoinableTaskContext joinableTaskContext = new JoinableTaskContext();
+
+        private readonly JoinableTaskFactory joinableTaskFactory;
+        private readonly JoinableTaskCollection joinableTaskCollection;
+
         public MainWindow()
         {
             InitializeComponent();
+            this.joinableTaskCollection = this.joinableTaskContext.CreateCollection();
+            this.joinableTaskFactory = this.joinableTaskContext.CreateFactory(this.joinableTaskCollection);
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            this.joinableTaskContext.Factory.Run(() => this.joinableTaskCollection.JoinTillEmptyAsync());
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -52,16 +69,19 @@ namespace AsyncAndThreadingDemo
             var _ = Dispatcher.BeginInvoke(new Action(() => label.Content = onUIThread));
         }
 
-        private async void StartLongProcess_Click(object sender, RoutedEventArgs e)
+        private void StartLongProcess_Click(object sender, RoutedEventArgs e)
         {
-            StartLongProcess.IsEnabled = false;
-            for (int i = 0; i <= 100; i++)
+            this.joinableTaskFactory.RunAsync(async delegate
             {
-                TaskProgress.Value = i;
-                await Task.Delay(50);
-            }
+                StartLongProcess.IsEnabled = false;
+                for (int i = 0; i <= 100; i++)
+                {
+                    TaskProgress.Value = i;
+                    await Task.Delay(50);
+                }
 
-            StartLongProcess.IsEnabled = true;
+                StartLongProcess.IsEnabled = true;
+            });
         }
     }
 }
