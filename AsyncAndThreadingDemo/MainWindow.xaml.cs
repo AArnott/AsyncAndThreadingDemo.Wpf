@@ -53,22 +53,23 @@ namespace AsyncAndThreadingDemo
         private async Task TestAsync()
         {
             await Test2Async();
-            RecordUIThreadCheck(Label3);
+            await RecordUIThreadCheckAsync(Label3);
         }
 
         private async Task Test2Async()
         {
             await Task.Yield();
-            RecordUIThreadCheck(Label1);
+            await RecordUIThreadCheckAsync(Label1);
 
             await Task.Delay(100).ConfigureAwait(false); // also try 0
-            RecordUIThreadCheck(Label2);
+            await RecordUIThreadCheckAsync(Label2);
         }
 
-        private void RecordUIThreadCheck(Label label)
+        private async Task RecordUIThreadCheckAsync(Label label)
         {
             bool onUIThread = this.Dispatcher.Thread == Thread.CurrentThread;
-            var _ = Dispatcher.BeginInvoke(new Action(() => label.Content = onUIThread));
+            await this.joinableTaskFactory.SwitchToMainThreadAsync();
+            label.Content = onUIThread;
         }
 
         private void StartLongProcess_Click(object sender, RoutedEventArgs e)
