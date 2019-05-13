@@ -47,7 +47,10 @@ namespace AsyncAndThreadingDemo
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            TestAsync(); // fix me! There's a warning here.
+            this.joinableTaskFactory.RunAsync(async delegate
+            {
+                await TestAsync();
+            });
         }
 
         private async Task TestAsync()
